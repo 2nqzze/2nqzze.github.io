@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EasyPDF - 免费在线PDF工具</title>
+  <meta name="description" content="免费在线PDF处理工具：PDF合并、拆分、压缩、转图片，无需上传服务器，本地处理保障隐私安全">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    .animate-slide-down { animation: slideDown 0.3s ease-out forwards; }
+    .drop-zone { border: 2px dashed #c7d2fe; transition: all 0.25s; }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #6366f1; background: #eef2ff; }
+    .tool-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .tool-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px -12px rgba(99, 102, 241, 0.25); }
+    .ad-unit { position: relative; overflow: hidden; border-radius: 12px; background: #fafafa; border: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: center; }
+    .ad-unit::before { content: '广告'; position: absolute; top: 6px; right: 8px; font-size: 10px; color: #bbb; background: #fff; padding: 1px 6px; border-radius: 3px; border: 1px solid #eee; z-index: 1; letter-spacing: 0.5px; }
+    .ad-label { font-size: 10px; color: #bbb; letter-spacing: 0.5px; position: absolute; top: 6px; right: 8px; background: #fff; padding: 1px 6px; border-radius: 3px; border: 1px solid #eee; z-index: 1; }
+    .ad-content { color: #c5c5c5; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .btn-primary { transition: all 0.2s; }
+    .btn-primary:active { transform: scale(0.97); }
+    .file-item { transition: all 0.2s; }
+    .file-item:hover { background: #f3f4f6; }
+    .progress-bar { transition: width 0.3s ease; }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+  <!-- ====== TOAST CONTAINER ====== -->
+  <div id="toast-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 max-w-sm"></div>
+
+  <!-- ====== NAVIGATION ====== -->
+  <nav class="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <a href="#" class="flex items-center gap-2.5 font-bold text-xl text-gray-800 no-underline" onclick="scrollToTop()">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#4f46e5"/><path d="M8 10h10a4 4 0 010 8H8V10z" fill="white" opacity="0.9"/><path d="M8 22h7a3 3 0 000-6H8v6z" fill="white" opacity="0.7"/></svg>
+          EasyPDF
+        </a>
+        <div class="flex items-center gap-3 sm:gap-4">
+          <span class="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M4 8l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            完全免费
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ====== HERO ====== -->
+  <section class="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-white py-12 sm:py-20">
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-brand-200/30 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-brand-100/40 rounded-full blur-3xl"></div>
+    </div>
+    <div class="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight animate-fade-in-up">
+        在线PDF工具，<span class="text-brand-600">安全免费</span>
+      </h1>
+      <p class="mt-4 sm:mt-5 text-base sm:text-lg text-gray-500 max-w-2xl mx-auto animate-fade-in-up" style="animation-delay: 0.1s;">
+        所有文件在您的浏览器本地处理，不上传服务器，保障隐私安全。完全免费，不限次数。
+      </p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3 animate-fade-in-up" style="animation-delay: 0.2s;">
+        <span class="inline-flex items-center gap-1.5 text-sm text-gray-500 bg-white/80 px-3 py-1.5 rounded-full shadow-sm">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/></svg> 无需注册
+        </span>
+        <span class="inline-flex items-center gap-1.5 text-sm text-gray-500 bg-white/80 px-3 py-1.5 rounded-full shadow-sm">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/></svg> 本地处理
+        </span>
+        <span class="inline-flex items-center gap-1.5 text-sm text-gray-500 bg-white/80 px-3 py-1.5 rounded-full shadow-sm">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/></svg> 隐私安全
+        </span>
+        <span class="inline-flex items-center gap-1.5 text-sm text-gray-500 bg-white/80 px-3 py-1.5 rounded-full shadow-sm">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/></svg> 完全免费
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== TOOL CARDS ====== -->
+  <section id="tools" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 pb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <!-- Merge Card -->
+      <div class="tool-card bg-white rounded-2xl p-6 shadow-md border border-gray-100 cursor-pointer" onclick="selectTool('merge')">
+        <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M8 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2h-1" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round"/><path d="M8 3h8v4H8V3z" stroke="#6366f1" stroke-width="1.8"/><path d="M12 11v6m-3-3l3 3 3-3" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-800">PDF合并</h3>
+        <p class="mt-1.5 text-sm text-gray-500">将多个PDF文件合并为单个文档，支持自定义排序</p>
+      </div>
+      <!-- Split Card -->
+      <div class="tool-card bg-white rounded-2xl p-6 shadow-md border border-gray-100 cursor-pointer" onclick="selectTool('split')">
+        <div class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M8 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2h-1" stroke="#e11d48" stroke-width="1.8" stroke-linecap="round"/><path d="M8 3h8v4H8V3z" stroke="#e11d48" stroke-width="1.8"/><path d="M12 8v4m0 0l-2-1.5m2 1.5l2-1.5" stroke="#e11d48" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-800">PDF拆分</h3>
+        <p class="mt-1.5 text-sm text-gray-500">将PDF拆分为多个单独页面，按需选择页面范围</p>
+      </div>
+      <!-- Compress Card -->
+      <div class="tool-card bg-white rounded-2xl p-6 shadow-md border border-gray-100 cursor-pointer" onclick="selectTool('compress')">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M16 4h2a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" stroke="#059669" stroke-width="1.8" stroke-linecap="round"/><path d="M12 3v11m0 0l-3-3m3 3l3-3" stroke="#059669" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3h8v3H8V3z" stroke="#059669" stroke-width="1.8"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-800">PDF压缩</h3>
+        <p class="mt-1.5 text-sm text-gray-500">减小PDF文件体积，节省存储空间，优化传输速度</p>
+      </div>
+      <!-- To Image Card -->
+      <div class="tool-card bg-white rounded-2xl p-6 shadow-md border border-gray-100 cursor-pointer" onclick="selectTool('toimage')">
+        <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#d97706" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="#d97706"/><path d="M21 15l-5-5L5 21" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-800">PDF转图片</h3>
+        <p class="mt-1.5 text-sm text-gray-500">将PDF页面转换为高质量PNG或JPEG图片</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== MAIN CONTENT AREA (workspace + sidebar ad) ====== -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 flex-1">
+    <div class="flex flex-col lg:flex-row gap-6">
+
+      <!-- WORKSPACE -->
+      <div class="flex-1 min-w-0">
+        <div id="workspace" class="hidden bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden animate-slide-down">
+
+          <!-- Workspace Header -->
+          <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+            <div class="flex items-center gap-3">
+              <div id="ws-icon" class="w-9 h-9 rounded-lg flex items-center justify-center"></div>
+              <div>
+                <h2 id="ws-title" class="text-lg font-semibold text-gray-800"></h2>
+                <p id="ws-desc" class="text-xs text-gray-500"></p>
+              </div>
+            </div>
+            <button onclick="closeWorkspace()" class="p-2 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors" title="关闭">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15m10 0L5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+
+          <!-- Workspace Body (dynamic content) -->
+          <div id="ws-body" class="p-5 sm:p-6"></div>
+        </div>
+
+        <!-- Workspace placeholder -->
+        <div id="workspace-placeholder" class="text-center py-16 text-gray-400">
+          <svg class="mx-auto mb-4" width="56" height="56" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="1.5"/></svg>
+          <p class="text-sm">点击上方工具卡片开始使用</p>
+        </div>
+      </div>
+
+      <!-- SIDEBAR AD (Desktop) -->
+      <aside class="hidden lg:block w-72 shrink-0">
+        <div class="sticky top-24 space-y-4">
+          <div class="ad-unit h-64">
+            <div class="ad-content">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.2"/><path d="M8 7h8M8 11h6M8 15h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              <span>广告位 — 300×250</span>
+            </div>
+          </div>
+          <div class="ad-unit h-64">
+            <div class="ad-content">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.2"/><path d="M8 7h8M8 11h6M8 15h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              <span>广告位 — 300×250</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ====== INLINE AD BANNER (between tools & workspace) ====== -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+    <div class="ad-unit h-20 sm:h-16">
+      <div class="ad-content">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.2"/><path d="M8 7h8M8 11h6M8 15h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="text-xs">广告位 — 横幅 Banner 728×90</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== MOBILE AD BANNER ====== -->
+  <div class="lg:hidden max-w-7xl mx-auto px-4 sm:px-6 pb-6">
+    <div class="ad-unit h-20">
+      <div class="ad-content">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.2"/><path d="M8 7h8M8 11h6M8 15h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="text-xs">广告位 — 移动端横幅</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== BOTTOM AD BANNER ====== -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+    <div class="ad-unit h-24">
+      <div class="ad-content">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.2"/><path d="M8 7h8M8 11h6M8 15h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>广告位 — 底部横幅 728×90</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== FOOTER ====== -->
+  <footer class="bg-white border-t border-gray-100 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+          <span>&copy; 2026 EasyPDF</span>
+          <span class="hidden sm:inline">·</span>
+          <span>所有文件仅在浏览器本地处理</span>
+          <span class="hidden sm:inline">·</span>
+          <span>完全免费</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ====== SCRIPTS ====== -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    // Configure PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // ==================== UTILITY FUNCTIONS ====================
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const colors = { success: 'bg-emerald-50 border-emerald-200 text-emerald-800', error: 'bg-red-50 border-red-200 text-red-800', info: 'bg-brand-50 border-brand-200 text-brand-700', warning: 'bg-amber-50 border-amber-200 text-amber-800' };
+      const icons = { success: '<svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6 9l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+                      error: '<svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M11 7l-4 4m4 0L7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+                      info: '<svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 6v4M9 12h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+                      warning: '<svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2L1 17h16L9 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 7v3M9 13h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' };
+      const toast = document.createElement('div');
+      toast.className = `flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium animate-slide-down ${colors[type] || colors.info}`;
+      toast.innerHTML = `${icons[type] || icons.info}<span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3500);
+    }
+
+    function setLoading(el, loading) {
+      if (loading) {
+        el.disabled = true;
+        el.setAttribute('data-original', el.innerHTML);
+        el.innerHTML = `<svg class="animate-spin inline-block" width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.3"/><path d="M12 2a10 10 0 019.95 9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg> 处理中...`;
+      } else {
+        el.disabled = false;
+        if (el.hasAttribute('data-original')) el.innerHTML = el.getAttribute('data-original');
+      }
+    }
+
+    // ==================== TOOL: PDF MERGE ====================
+
+    const MergeTool = {
+      files: [],
+
+      render() {
+        this.files = [];
+        const html = `
+          <div class="space-y-5">
+            <div class="drop-zone rounded-xl p-8 text-center cursor-pointer" id="merge-dropzone">
+              <input type="file" id="merge-input" accept=".pdf,application/pdf" multiple class="hidden">
+              <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 3v14m0 0l-4-4m4 4l4-4" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#6366f1" stroke-width="1.8"/></svg>
+              <p class="text-gray-600 font-medium">拖拽PDF文件到此处，或点击选择</p>
+              <p class="text-gray-400 text-sm mt-1">支持同时选择多个PDF文件</p>
+            </div>
+            <div id="merge-file-list" class="space-y-2 ${this.files.length === 0 ? 'hidden' : ''}">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-600">已选择 <span id="merge-count">0</span> 个文件</span>
+                <button onclick="MergeTool.clearFiles()" class="text-xs text-red-500 hover:text-red-600 font-medium">清空</button>
+              </div>
+              <div id="merge-list-inner" class="space-y-1.5 max-h-64 overflow-y-auto"></div>
+            </div>
+            <button id="merge-btn" onclick="MergeTool.process()" class="btn-primary w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed" ${this.files.length < 2 ? 'disabled' : ''}>
+              <svg class="inline-block mr-1.5" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2h-1" stroke="currentColor" stroke-width="1.8"/><path d="M8 3h8v4H8V3z" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6m-3-3l3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              合并PDF
+            </button>
+          </div>
+        `;
+        document.getElementById('ws-body').innerHTML = html;
+        this._bindEvents();
+        this._updateList();
+      },
+
+      _bindEvents() {
+        const dropzone = document.getElementById('merge-dropzone');
+        const input = document.getElementById('merge-input');
+
+        dropzone.addEventListener('click', () => input.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+        dropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('drag-over');
+          this.addFiles(Array.from(e.dataTransfer.files));
+        });
+        input.addEventListener('change', () => {
+          if (input.files.length) this.addFiles(Array.from(input.files));
+          input.value = '';
+        });
+      },
+
+      addFiles(newFiles) {
+        const pdfFiles = newFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+        if (pdfFiles.length !== newFiles.length) showToast('部分文件非PDF格式已跳过', 'warning');
+        if (pdfFiles.length === 0) return;
+        this.files.push(...pdfFiles);
+        this._updateList();
+        this._updateButton();
+      },
+
+      removeFile(index) {
+        this.files.splice(index, 1);
+        this._updateList();
+        this._updateButton();
+      },
+
+      clearFiles() {
+        this.files = [];
+        this._updateList();
+        this._updateButton();
+      },
+
+      _updateList() {
+        const container = document.getElementById('merge-file-list');
+        const list = document.getElementById('merge-list-inner');
+        const count = document.getElementById('merge-count');
+        if (!container || !list) return;
+        if (this.files.length === 0) {
+          container.classList.add('hidden');
+          return;
+        }
+        container.classList.remove('hidden');
+        if (count) count.textContent = this.files.length;
+        list.innerHTML = this.files.map((f, i) => `
+          <div class="file-item flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="text-xs font-medium text-gray-400 w-5 shrink-0">${i + 1}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="shrink-0"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#ef4444" stroke-width="1.8"/><polyline points="14 2 14 8 20 8" stroke="#ef4444" stroke-width="1.8"/></svg>
+              <span class="text-sm text-gray-700 truncate" title="${f.name}">${f.name}</span>
+              <span class="text-xs text-gray-400 shrink-0 hidden sm:inline">(${formatBytes(f.size)})</span>
+            </div>
+            <button onclick="MergeTool.removeFile(${i})" class="shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors" title="移除">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11 5L5 11m6 0L5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        `).join('');
+      },
+
+      _updateButton() {
+        const btn = document.getElementById('merge-btn');
+        if (btn) {
+          btn.disabled = this.files.length < 2;
+        }
+      },
+
+      async process() {
+        if (this.files.length < 2) return;
+        const btn = document.getElementById('merge-btn');
+        setLoading(btn, true);
+        try {
+          const mergedDoc = await PDFLib.PDFDocument.create();
+          for (const file of this.files) {
+            const buf = await file.arrayBuffer();
+            const doc = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true });
+            const pages = await mergedDoc.copyPages(doc, doc.getPageIndices());
+            pages.forEach(p => mergedDoc.addPage(p));
+          }
+          const result = await mergedDoc.save();
+
+          downloadBlob(new Blob([result], { type: 'application/pdf' }), 'merged.pdf');
+          showToast(`成功合并 ${this.files.length} 个PDF文件`, 'success');
+        } catch (err) {
+          console.error(err);
+          showToast('合并失败：' + (err.message || '未知错误'), 'error');
+        }
+        setLoading(btn, false);
+      }
+    };
+
+    // ==================== TOOL: PDF SPLIT ====================
+
+    const SplitTool = {
+      file: null,
+      pageCount: 0,
+      mode: 'all',
+
+      render() {
+        this.file = null;
+        this.pageCount = 0;
+        this.mode = 'all';
+        document.getElementById('ws-body').innerHTML = `
+          <div class="space-y-5">
+            <div class="drop-zone rounded-xl p-8 text-center cursor-pointer" id="split-dropzone">
+              <input type="file" id="split-input" accept=".pdf,application/pdf" class="hidden">
+              <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 3v14m0 0l-4-4m4 4l4-4" stroke="#e11d48" stroke-width="1.8" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#e11d48" stroke-width="1.8"/></svg>
+              <p class="text-gray-600 font-medium">拖拽PDF文件到此处，或点击选择</p>
+              <p class="text-gray-400 text-sm mt-1">将PDF拆分为独立页面</p>
+            </div>
+            <div id="split-info" class="hidden bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-700" id="split-filename"></p>
+                  <p class="text-xs text-gray-500 mt-0.5" id="split-filesize"></p>
+                </div>
+                <span class="text-sm font-semibold text-rose-600 bg-rose-50 px-3 py-1 rounded-full" id="split-pages-badge"></span>
+              </div>
+              <div class="mt-3 flex gap-2">
+                <button onclick="SplitTool.setMode('all')" id="split-mode-all" class="flex-1 py-2 text-sm rounded-lg font-medium bg-rose-100 text-rose-700">全部分页</button>
+                <button onclick="SplitTool.setMode('range')" id="split-mode-range" class="flex-1 py-2 text-sm rounded-lg font-medium bg-gray-100 text-gray-500">指定范围</button>
+              </div>
+              <div id="split-range-input" class="hidden mt-3">
+                <label class="text-xs text-gray-500 font-medium">页码范围（如：1-3,5,7-9）</label>
+                <input type="text" id="split-range-value" placeholder="1-3,5,7-9" class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300">
+              </div>
+            </div>
+            <button id="split-btn" onclick="SplitTool.process()" class="btn-primary w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <svg class="inline-block mr-1.5" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2h-1" stroke="currentColor" stroke-width="1.8"/><path d="M8 3h8v4H8V3z" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v4m0 0l-2-1.5m2 1.5l2-1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              拆分PDF
+            </button>
+          </div>
+        `;
+        this._bindEvents();
+      },
+
+      _bindEvents() {
+        const dropzone = document.getElementById('split-dropzone');
+        const input = document.getElementById('split-input');
+        dropzone.addEventListener('click', () => input.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+        dropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('drag-over');
+          if (e.dataTransfer.files.length) this.loadFile(e.dataTransfer.files[0]);
+        });
+        input.addEventListener('change', () => {
+          if (input.files.length) this.loadFile(input.files[0]);
+          input.value = '';
+        });
+      },
+
+      setMode(mode) {
+        this.mode = mode;
+        document.getElementById('split-mode-all').className = mode === 'all' ? 'flex-1 py-2 text-sm rounded-lg font-medium bg-rose-100 text-rose-700' : 'flex-1 py-2 text-sm rounded-lg font-medium bg-gray-100 text-gray-500';
+        document.getElementById('split-mode-range').className = mode === 'range' ? 'flex-1 py-2 text-sm rounded-lg font-medium bg-rose-100 text-rose-700' : 'flex-1 py-2 text-sm rounded-lg font-medium bg-gray-100 text-gray-500';
+        document.getElementById('split-range-input').classList.toggle('hidden', mode !== 'range');
+      },
+
+      async loadFile(file) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          showToast('请选择PDF文件', 'warning');
+          return;
+        }
+        this.file = file;
+        try {
+          const buf = await file.arrayBuffer();
+          const doc = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true });
+          this.pageCount = doc.getPageCount();
+          document.getElementById('split-info').classList.remove('hidden');
+          document.getElementById('split-filename').textContent = file.name;
+          document.getElementById('split-filesize').textContent = formatBytes(file.size);
+          document.getElementById('split-pages-badge').textContent = `${this.pageCount} 页`;
+          document.getElementById('split-btn').disabled = false;
+        } catch (err) {
+          showToast('无法读取PDF文件', 'error');
+        }
+      },
+
+      _parseRange(raw) {
+        const pages = new Set();
+        const parts = raw.replace(/\s/g, '').split(',');
+        for (const part of parts) {
+          if (part.includes('-')) {
+            const [s, e] = part.split('-').map(Number);
+            if (isNaN(s) || isNaN(e) || s < 1 || e > this.pageCount || s > e) return null;
+            for (let i = s; i <= e; i++) pages.add(i);
+          } else {
+            const n = Number(part);
+            if (isNaN(n) || n < 1 || n > this.pageCount) return null;
+            pages.add(n);
+          }
+        }
+        return pages.size ? Array.from(pages).sort((a, b) => a - b) : null;
+      },
+
+      async process() {
+        if (!this.file) return;
+        const btn = document.getElementById('split-btn');
+
+        let targetPages;
+        if (this.mode === 'range') {
+          const raw = document.getElementById('split-range-value').value.trim();
+          if (!raw) { showToast('请输入页码范围', 'warning'); return; }
+          targetPages = this._parseRange(raw);
+          if (!targetPages) { showToast('页码范围格式不正确', 'error'); return; }
+        } else {
+          targetPages = Array.from({ length: this.pageCount }, (_, i) => i + 1);
+          if (this.pageCount > 50) {
+            showToast('页数过多（最多50页），请使用指定范围', 'warning');
+            return;
+          }
+        }
+
+        setLoading(btn, true);
+        try {
+          const buf = await this.file.arrayBuffer();
+          const srcDoc = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true });
+          const zip = new JSZip();
+
+          for (let i = 0; i < targetPages.length; i++) {
+            const pageNum = targetPages[i];
+            const newDoc = await PDFLib.PDFDocument.create();
+            const [page] = await newDoc.copyPages(srcDoc, [pageNum - 1]);
+            newDoc.addPage(page);
+            const bytes = await newDoc.save();
+            const baseName = this.file.name.replace(/\.pdf$/i, '');
+            zip.file(`${baseName}_p${pageNum}.pdf`, bytes);
+            // Update progress
+            if (targetPages.length > 5) {
+              btn.innerHTML = `处理中... ${i + 1}/${targetPages.length}`;
+            }
+          }
+
+          if (targetPages.length === 1) {
+            const baseName = this.file.name.replace(/\.pdf$/i, '');
+            const bytes = await zip.file(`${baseName}_p${targetPages[0]}.pdf`).async('uint8array');
+            downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${baseName}_p${targetPages[0]}.pdf`);
+          } else {
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const baseName = this.file.name.replace(/\.pdf$/i, '');
+            downloadBlob(zipBlob, `${baseName}_split.zip`);
+          }
+
+          showToast(`成功拆分 ${targetPages.length} 个页面`, 'success');
+        } catch (err) {
+          console.error(err);
+          showToast('拆分失败：' + (err.message || '未知错误'), 'error');
+        }
+        setLoading(btn, false);
+      }
+    };
+
+    // ==================== TOOL: PDF COMPRESS ====================
+
+    const CompressTool = {
+      file: null,
+
+      render() {
+        this.file = null;
+        document.getElementById('ws-body').innerHTML = `
+          <div class="space-y-5">
+            <div class="drop-zone rounded-xl p-8 text-center cursor-pointer" id="compress-dropzone">
+              <input type="file" id="compress-input" accept=".pdf,application/pdf" class="hidden">
+              <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 3v14m0 0l-4-4m4 4l4-4" stroke="#059669" stroke-width="1.8" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#059669" stroke-width="1.8"/></svg>
+              <p class="text-gray-600 font-medium">拖拽PDF文件到此处，或点击选择</p>
+              <p class="text-gray-400 text-sm mt-1">压缩后文件在浏览器本地处理</p>
+            </div>
+            <div id="compress-info" class="hidden bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-700" id="compress-filename"></p>
+                  <p class="text-xs text-gray-500 mt-0.5">原始大小：<span id="compress-original-size"></span></p>
+                </div>
+              </div>
+            </div>
+            <div id="compress-result" class="hidden bg-emerald-50 rounded-xl p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-emerald-700">压缩完成</p>
+                  <p class="text-xs text-emerald-600 mt-0.5">压缩后：<span id="compress-new-size"></span> · 减小 <span id="compress-ratio"></span></p>
+                </div>
+                <button onclick="CompressTool.download()" id="compress-download-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors">下载</button>
+              </div>
+            </div>
+            <button id="compress-btn" onclick="CompressTool.process()" class="btn-primary w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <svg class="inline-block mr-1.5" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M16 4h2a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" stroke="currentColor" stroke-width="1.8"/><path d="M12 3v11m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3h8v3H8V3z" stroke="currentColor" stroke-width="1.8"/></svg>
+              压缩PDF
+            </button>
+          </div>
+        `;
+        this._bindEvents();
+      },
+
+      _bindEvents() {
+        const dropzone = document.getElementById('compress-dropzone');
+        const input = document.getElementById('compress-input');
+        dropzone.addEventListener('click', () => input.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+        dropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('drag-over');
+          if (e.dataTransfer.files.length) this.loadFile(e.dataTransfer.files[0]);
+        });
+        input.addEventListener('change', () => {
+          if (input.files.length) this.loadFile(input.files[0]);
+          input.value = '';
+        });
+      },
+
+      loadFile(file) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          showToast('请选择PDF文件', 'warning');
+          return;
+        }
+        this.file = file;
+        document.getElementById('compress-info').classList.remove('hidden');
+        document.getElementById('compress-result').classList.add('hidden');
+        document.getElementById('compress-filename').textContent = file.name;
+        document.getElementById('compress-original-size').textContent = formatBytes(file.size);
+        document.getElementById('compress-btn').disabled = false;
+      },
+
+      async process() {
+        if (!this.file) return;
+        const btn = document.getElementById('compress-btn');
+        setLoading(btn, true);
+        document.getElementById('compress-result').classList.add('hidden');
+        try {
+          const originalSize = this.file.size;
+          const buf = await this.file.arrayBuffer();
+          const doc = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true });
+
+          // Strip metadata to reduce size
+          doc.setTitle('');
+          doc.setAuthor('');
+          doc.setSubject('');
+          doc.setKeywords([]);
+          doc.setProducer('');
+          doc.setCreator('');
+
+          // Save with object streams enabled for better compression
+          const compressedBytes = await doc.save({ useObjectStreams: true });
+          const compressedSize = compressedBytes.byteLength;
+
+          this._resultData = compressedBytes;
+          const ratio = originalSize > 0 ? ((1 - compressedSize / originalSize) * 100).toFixed(1) : 0;
+
+          document.getElementById('compress-new-size').textContent = formatBytes(compressedSize);
+          document.getElementById('compress-ratio').textContent = ratio >= 0 ? `${ratio}%` : '0%';
+          document.getElementById('compress-result').classList.remove('hidden');
+
+          showToast(ratio > 0 ? `压缩完成，减小 ${ratio}%` : 'PDF已优化（该文件压缩空间有限）', 'success');
+        } catch (err) {
+          console.error(err);
+          showToast('压缩失败：' + (err.message || '未知错误'), 'error');
+        }
+        setLoading(btn, false);
+      },
+
+      download() {
+        if (this._resultData) {
+          const name = this.file.name.replace(/\.pdf$/i, '');
+          downloadBlob(new Blob([this._resultData], { type: 'application/pdf' }), `${name}_compressed.pdf`);
+        }
+      }
+    };
+
+    // ==================== TOOL: PDF TO IMAGE ====================
+
+    const ToImageTool = {
+      file: null,
+      pageCount: 0,
+      imageFormat: 'png',
+      _resultBlobs: [],
+
+      render() {
+        this.file = null;
+        this.pageCount = 0;
+        this.imageFormat = 'png';
+        this._resultBlobs = [];
+        document.getElementById('ws-body').innerHTML = `
+          <div class="space-y-5">
+            <div class="drop-zone rounded-xl p-8 text-center cursor-pointer" id="toimage-dropzone">
+              <input type="file" id="toimage-input" accept=".pdf,application/pdf" class="hidden">
+              <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 3v14m0 0l-4-4m4 4l4-4" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#d97706" stroke-width="1.8"/></svg>
+              <p class="text-gray-600 font-medium">拖拽PDF文件到此处，或点击选择</p>
+              <p class="text-gray-400 text-sm mt-1">将PDF页面转为高质量图片</p>
+            </div>
+            <div id="toimage-info" class="hidden bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p class="text-sm font-medium text-gray-700" id="toimage-filename"></p>
+                  <p class="text-xs text-gray-500 mt-0.5" id="toimage-filesize"></p>
+                </div>
+                <span class="text-sm font-semibold text-amber-600 bg-amber-50 px-3 py-1 rounded-full" id="toimage-pages"></span>
+              </div>
+              <div class="mt-3 flex items-center gap-3">
+                <span class="text-sm text-gray-600">图片格式：</span>
+                <button onclick="ToImageTool.setFormat('png')" id="fmt-png" class="px-3 py-1.5 text-sm rounded-lg font-medium bg-amber-100 text-amber-700">PNG</button>
+                <button onclick="ToImageTool.setFormat('jpeg')" id="fmt-jpeg" class="px-3 py-1.5 text-sm rounded-lg font-medium bg-gray-100 text-gray-500">JPEG</button>
+              </div>
+            </div>
+            <div id="toimage-result" class="hidden bg-gray-50 rounded-xl p-4">
+              <p class="text-sm font-medium text-gray-700 mb-2">转换完成（<span id="toimage-count">0</span> 张图片）</p>
+              <button onclick="ToImageTool.download()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">下载全部图片 (ZIP)</button>
+            </div>
+            <button id="toimage-btn" onclick="ToImageTool.process()" class="btn-primary w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <svg class="inline-block mr-1.5" width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              转为图片
+            </button>
+            <div id="toimage-progress" class="hidden">
+              <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div id="toimage-progress-bar" class="progress-bar h-full bg-amber-500 rounded-full" style="width: 0%"></div>
+              </div>
+              <p class="text-xs text-gray-500 mt-1 text-center" id="toimage-progress-text"></p>
+            </div>
+          </div>
+        `;
+        this._bindEvents();
+      },
+
+      _bindEvents() {
+        const dropzone = document.getElementById('toimage-dropzone');
+        const input = document.getElementById('toimage-input');
+        dropzone.addEventListener('click', () => input.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+        dropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('drag-over');
+          if (e.dataTransfer.files.length) this.loadFile(e.dataTransfer.files[0]);
+        });
+        input.addEventListener('change', () => {
+          if (input.files.length) this.loadFile(input.files[0]);
+          input.value = '';
+        });
+      },
+
+      setFormat(fmt) {
+        this.imageFormat = fmt;
+        document.getElementById('fmt-png').className = fmt === 'png' ? 'px-3 py-1.5 text-sm rounded-lg font-medium bg-amber-100 text-amber-700' : 'px-3 py-1.5 text-sm rounded-lg font-medium bg-gray-100 text-gray-500';
+        document.getElementById('fmt-jpeg').className = fmt === 'jpeg' ? 'px-3 py-1.5 text-sm rounded-lg font-medium bg-amber-100 text-amber-700' : 'px-3 py-1.5 text-sm rounded-lg font-medium bg-gray-100 text-gray-500';
+      },
+
+      async loadFile(file) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          showToast('请选择PDF文件', 'warning');
+          return;
+        }
+        this.file = file;
+        try {
+          const buf = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+          this.pageCount = pdf.numPages;
+          if (this.pageCount > 50) {
+            showToast('PDF页数过多（最多50页），请拆分后再转换', 'warning');
+            this.pageCount = 0;
+            return;
+          }
+          document.getElementById('toimage-info').classList.remove('hidden');
+          document.getElementById('toimage-filename').textContent = file.name;
+          document.getElementById('toimage-filesize').textContent = formatBytes(file.size);
+          document.getElementById('toimage-pages').textContent = `${this.pageCount} 页`;
+          document.getElementById('toimage-btn').disabled = false;
+          document.getElementById('toimage-result').classList.add('hidden');
+        } catch (err) {
+          showToast('无法读取PDF文件', 'error');
+        }
+      },
+
+      async process() {
+        if (!this.file || this.pageCount === 0) return;
+        const btn = document.getElementById('toimage-btn');
+        setLoading(btn, true);
+        document.getElementById('toimage-progress').classList.remove('hidden');
+        document.getElementById('toimage-result').classList.add('hidden');
+        this._resultBlobs = [];
+
+        try {
+          const buf = await this.file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+          const total = pdf.numPages;
+
+          for (let i = 1; i <= total; i++) {
+            const page = await pdf.getPage(i);
+            const scale = 2.0;
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            const mimeType = this.imageFormat === 'jpeg' ? 'image/jpeg' : 'image/png';
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, 0.92));
+            this._resultBlobs.push({ blob, pageNum: i });
+
+            const pct = Math.round((i / total) * 100);
+            document.getElementById('toimage-progress-bar').style.width = `${pct}%`;
+            document.getElementById('toimage-progress-text').textContent = `${i} / ${total} 页`;
+          }
+
+          document.getElementById('toimage-progress').classList.add('hidden');
+          document.getElementById('toimage-result').classList.remove('hidden');
+          document.getElementById('toimage-count').textContent = this._resultBlobs.length;
+
+          showToast(`成功转换 ${this._resultBlobs.length} 张图片`, 'success');
+        } catch (err) {
+          console.error(err);
+          document.getElementById('toimage-progress').classList.add('hidden');
+          showToast('转换失败：' + (err.message || '未知错误'), 'error');
+        }
+        setLoading(btn, false);
+      },
+
+      async download() {
+        if (this._resultBlobs.length === 0) return;
+        const baseName = this.file.name.replace(/\.pdf$/i, '');
+        const ext = this.imageFormat === 'jpeg' ? 'jpg' : 'png';
+
+        if (this._resultBlobs.length === 1) {
+          downloadBlob(this._resultBlobs[0].blob, `${baseName}_p1.${ext}`);
+        } else {
+          const zip = new JSZip();
+          this._resultBlobs.forEach(({ blob, pageNum }) => {
+            zip.file(`${baseName}_p${pageNum}.${ext}`, blob);
+          });
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          downloadBlob(zipBlob, `${baseName}_images.zip`);
+        }
+      }
+    };
+
+    // ==================== WORKSPACE CONTROLLER ====================
+
+    let currentTool = null;
+
+    const toolConfig = {
+      merge: {
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M8 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2h-1" stroke="white" stroke-width="1.8"/><path d="M8 3h8v4H8V3z" stroke="white" stroke-width="1.8"/><path d="M12 11v6m-3-3l3 3 3-3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        iconBg: 'bg-indigo-500',
+        title: 'PDF合并',
+        desc: '将多个PDF文件合并为一个文档',
+        render: () => MergeTool.render()
+      },
+      split: {
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M8 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2h-1" stroke="white" stroke-width="1.8"/><path d="M8 3h8v4H8V3z" stroke="white" stroke-width="1.8"/><path d="M12 8v4m0 0l-2-1.5m2 1.5l2-1.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>',
+        iconBg: 'bg-rose-500',
+        title: 'PDF拆分',
+        desc: '将PDF拆分为独立页面',
+        render: () => SplitTool.render()
+      },
+      compress: {
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16 4h2a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" stroke="white" stroke-width="1.8"/><path d="M12 3v11m0 0l-3-3m3 3l3-3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3h8v3H8V3z" stroke="white" stroke-width="1.8"/></svg>',
+        iconBg: 'bg-emerald-500',
+        title: 'PDF压缩',
+        desc: '减小PDF文件体积',
+        render: () => CompressTool.render()
+      },
+      toimage: {
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="white"/><path d="M21 15l-5-5L5 21" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        iconBg: 'bg-amber-500',
+        title: 'PDF转图片',
+        desc: '将PDF页面转为图片格式',
+        render: () => ToImageTool.render()
+      }
+    };
+
+    function selectTool(tool) {
+      currentTool = tool;
+      const config = toolConfig[tool];
+      const workspace = document.getElementById('workspace');
+      const placeholder = document.getElementById('workspace-placeholder');
+
+      document.getElementById('ws-icon').innerHTML = config.icon;
+      document.getElementById('ws-icon').className = `w-9 h-9 rounded-lg flex items-center justify-center ${config.iconBg}`;
+      document.getElementById('ws-title').textContent = config.title;
+      document.getElementById('ws-desc').textContent = config.desc;
+
+      placeholder.classList.add('hidden');
+      workspace.classList.remove('hidden');
+      config.render();
+
+      // Scroll to workspace
+      workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeWorkspace() {
+      currentTool = null;
+      document.getElementById('workspace').classList.add('hidden');
+      document.getElementById('workspace-placeholder').classList.remove('hidden');
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      closeWorkspace();
+    }
+
+    // ==================== INITIALIZATION ====================
+
+    console.log('%c EasyPDF %c 已就绪 %c| %c所有处理在浏览器本地完成，无需上传服务器，完全免费',
+      'background:#4f46e5;color:white;padding:4px 8px;border-radius:4px 0 0 4px;font-weight:bold;',
+      'background:#10b981;color:white;padding:4px 8px;border-radius:0 4px 4px 0;',
+      '', 'color:#6b7280;');
+  </script>
+</body>
+</html>
